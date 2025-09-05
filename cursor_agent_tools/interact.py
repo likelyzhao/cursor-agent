@@ -179,7 +179,7 @@ Return ONLY the formatted text with ANSI codes that I can directly print to the 
 Do not include explanation text or markdown code blocks."""
 
         # Use the agent to generate the formatted outpu
-        agent_response = await agent.chat(format_prompt, temp_user_info)
+        agent_response = await agent.chat(format_prompt, temp_user_info, is_manual=False)
 
         # Handle structured response
         if isinstance(agent_response, dict):
@@ -237,7 +237,7 @@ If user input is NOT needed:
 
         # Get the analysis from the agen
         logger.debug("Sending analysis prompt to agent")
-        agent_response = await agent.chat(analysis_prompt, temp_user_info)
+        agent_response = await agent.chat(analysis_prompt, temp_user_info, is_manual=False)
 
         # Handle structured response
         if isinstance(agent_response, dict):
@@ -406,10 +406,10 @@ async def run_agent_interactive(
         await print_agent_information(agent, "thinking", "Breaking down the task and creating a plan...")
         query = f"""I'll help you complete this task step by step. I'll break it down and use tools like reading/creating/editing files and running commands as needed.
 
-TASK: {initial_query}
+                TASK: {initial_query}
 
-First, I'll create a plan for how to approach this task, then implement it step by step.
-"""
+                First, I'll create a plan for how to approach this task, then implement it step by step.
+                """
 
     while iteration <= max_iterations:
         await print_agent_information(agent, "status", f"Running iteration {iteration}/{max_iterations}")
@@ -731,23 +731,23 @@ async def get_continuation_prompt(agent: Any, iteration: int, last_response: str
         # Prepare the analysis prompt to determine the best continuation approach
         analysis_prompt = f"""You're helping implement a multi-step solution. Review the current status and determine how to continue.
 
-    Current iteration: {iteration}
-    Last response:
-    {last_response}
+                            Current iteration: {iteration}
+                            Last response:
+                            {last_response}
 
-    {f"User input for continuation: {user_input}" if user_input else "No additional user input provided."}
+                            {f"User input for continuation: {user_input}" if user_input else "No additional user input provided."}
 
-    What's the best continuation prompt for the next iteration? Consider:
-    1. Summarize progress so far
-    2. Identify next steps based on current status
-    3. Incorporate any user inpu
-    4. Frame the prompt to move the task forward
+                            What's the best continuation prompt for the next iteration? Consider:
+                            1. Summarize progress so far
+                            2. Identify next steps based on current status
+                            3. Incorporate any user inpu
+                            4. Frame the prompt to move the task forward
 
-    Return ONLY the continuation prompt itself with no additional explanations or meta-text.
-    """
+                            Return ONLY the continuation prompt itself with no additional explanations or meta-text.
+                            """
 
         # Get the continuation prompt from the agen
-        agent_response = await agent.chat(analysis_prompt, temp_user_info)
+        agent_response = await agent.chat(analysis_prompt, temp_user_info, is_manual=False)
 
         # Handle structured response
         if isinstance(agent_response, dict):
@@ -1141,7 +1141,7 @@ async def determine_next_steps(
         logger.info("Auto-continue enabled - continuing automatically")
         return NextAction(ActionType.AUTO_CONTINUE)
 
-    # Check if agent is asking for inpu
+    # Check if agent is asking for input
     user_input_request = await check_for_user_input_request(agent, response)
     if user_input_request and isinstance(user_input_request, str):
         logger.info("Agent is requesting user input")

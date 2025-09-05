@@ -13,6 +13,7 @@ from cursor_agent_tools.claude_agent import ClaudeAgent
 from cursor_agent_tools.logger import get_logger
 from cursor_agent_tools.openai_agent import OpenAIAgent
 from cursor_agent_tools.ollama_agent import OllamaAgent
+from cursor_agent_tools.openai_compatible_agent import OpenAICompatibleAgent
 from cursor_agent_tools.permissions import PermissionOptions, PermissionRequest, PermissionStatus
 
 # Initialize logger
@@ -118,7 +119,30 @@ def create_agent(
             host=host,
             **kwargs
         )
+    elif any(name in model for name in ["remote-"]):
+            logger.debug("Detected OpenAI Compatible model")
+            # Use environment variable if no API key is provided
+            if api_key is None:
+                api_key = os.getenv("REMOTE_API_KEY")
+                if not api_key:
+                    logger.error("OpenAI Compatible API key not provided and not found in environment")
+                    raise ValueError("OpenAI Compatible API key not provided and not found in environment")
+                else:
+                    logger.debug("Using OpenAI Compatible API key from environment")
 
+
+            model = model.replace('remote-','')
+            logger.info(f"Creating OpenAICompatibleAgent with model {model}")
+            return OpenAICompatibleAgent(
+                model=model,
+                api_key=api_key,
+                temperature=temperature,
+                timeout=timeout,
+                permission_callback=permission_callback,
+                permission_options=permissions,
+                default_tool_timeout=default_tool_timeout,
+                **kwargs
+            )
     # Handle OpenAI models
     elif any(name in model for name in ["gpt-", "openai"]):
         logger.debug("Detected OpenAI model")
