@@ -12,7 +12,6 @@ from cursor_agent_tools import run_agent_interactive
 
 async def main():
 
-
     #openai_api_key = "EMPTY"
     #openai_api_base = "http://221.12.22.162:8888/test/8006/v1"
     #model="holo-model/function-call"
@@ -26,28 +25,21 @@ async def main():
     agent = create_agent(model='remote-moonshotai/kimi-k2:free')
     #agent = create_agent(model='remote-holo-model/function-call')
 
-    user_info = {
-        "open_files": ["src/main.py", "src/utils.py"],
-        "recent_files": ["src/config.py", "tests/test_main.py"],
-        "os": "darwin",
-        "workspace_path": "/Users/zhaozhijian/Dev/quanxi/cursor-agent"
-    }
-
     agent.register_default_tools()
-    query = '''基于rag_osc/carla_examples文件夹下的例子写一个{}的dsl代码,
-                    注意以下一些常见的问题:
-                    1. scenario 的名字必须叫top
-                    2. 在osc 文件的最后添加一个'\n'的空行
-                    3. 不要使用变量声明和引用。
-                    4. 不要使用任意的assert 等断言来判断状态
-                    5. 在变量使用前要严格检查是否声明，严格保证先声明后使用.
-                    6. postion 只能在开始的时候使用，不能用于最终的位置控制。
-                    最终结果保存到当前目录下的{}文件中，不要生成其他文件'''.format(attention,save_name)
-    print(query)
+    # query = '''基于rag_osc/carla_examples文件夹下的例子写一个{}的dsl代码,
+    #                 注意以下一些常见的问题:
+    #                 1. scenario 的名字必须叫top
+    #                 2. 在osc 文件的最后添加一个'\n'的空行
+    #                 3. 不要使用变量声明和引用。
+    #                 4. 不要使用任意的assert 等断言来判断状态
+    #                 5. 在变量使用前要严格检查是否声明，严格保证先声明后使用.
+    #                 6. postion 只能在开始的时候使用，不能用于最终的位置控制。
+    #                 最终结果保存到当前目录下的{}文件中，不要生成其他文件'''.format(attention,save_name)
+    # print(query)
 
 
     await run_agent_interactive(
-        model='claude-3-5-sonnet-latest',
+        # model='claude-3-5-sonnet-latest',
 
         initial_query='''基于rag_osc/carla_examples文件夹下的例子写一个{}的dsl代码,
                         注意以下一些常见的问题:
