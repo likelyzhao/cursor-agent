@@ -7,6 +7,7 @@ if parent_dir not in sys.path:
 import asyncio
 from cursor_agent_tools import create_agent, run_agent_interactive
 from intention import IntentionGenerator
+from cursor_agent_tools import PermissionOptions
 
 async def oslk_generator(initial_query: str, save_name: str):
 
@@ -14,9 +15,17 @@ async def oslk_generator(initial_query: str, save_name: str):
     #save_name = 'ego_overtake_multiple_qwennext.oslk'
 
     #ego_overtake_right.osc
+    permissions = PermissionOptions(
+        yolo_mode=True,
+        command_allowlist=["ls", "echo", "git","cat", "cp", "mv", "mkdir"],
+        delete_file_protection=True
+    )
 
     # Create a Claude agent instance
-    agent = create_agent(model='remote-holo-model/function-call')
+    agent = create_agent(
+        model='remote-holo-model/function-call',
+        permissions=permissions
+    )
     intentionrewriter = IntentionGenerator(agent)
     intention = await intentionrewriter.generate_intention(initial_query)
     print("Generated Intention:", intention)
