@@ -13,7 +13,7 @@ __all__ = [
     "codebase_search",
     "grep_search",
     "file_search",
-    "web_search",
+    # "web_search",
     "trend_search",
     "get_trending_topics"
 ]
