@@ -20,6 +20,8 @@ IntentionRewritePrompt = """
     其他交通参与者：如NPC车辆、行人、自行车等。需要定义他们的初始状态，如位置、速度、车型。
 行为与动作：这是场景的灵魂，定义了动态实体如何随时间演变和交互。例如：车辆A在T1时刻发起变道。行人B在T2时刻从路边闯入车道。主车需要对这些事件做出反应。
 触发与条件：场景中事件发生的规则。例如，“当主车与前方车辆距离小于10米时，前车开始紧急制动”。
+不要生成无关的信息，字数
+控制在200字以内。
 
 输入: {context}
 
@@ -33,7 +35,11 @@ class IntentionGenerator:
     def remove_think_tags(self, text):
         import re
         # 使用正则表达式移除 <think> 和 </think> 之间的内容
-        return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        if '<think>'  in text:
+            return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        elif '</think>'  in text:
+            return re.sub(r'.*?</think>', '', text, flags=re.DOTALL)
+        return text
 
 
     async def generate_intention(self, context: str) -> str:

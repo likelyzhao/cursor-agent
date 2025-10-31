@@ -17,7 +17,7 @@ async def oslk_generator(initial_query: str, save_name: str):
     #ego_overtake_right.osc
     permissions = PermissionOptions(
         yolo_mode=True,
-        command_allowlist=["ls", "echo", "git","cat", "cp", "mv", "mkdir"],
+        command_allowlist=["ls", "echo", "git","cat", "cp", "mv", "mkdir","find"],
         delete_file_protection=True
     )
 

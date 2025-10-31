@@ -20,8 +20,8 @@ async def _worker(sem: asyncio.Semaphore, initial_query: str, save_name: str):
             #mkdir and cp the file and conversation_history.json to a folder named save_name without .oslk
             folder_name = save_name[:-5]  # Remove .oslk extension
             os.makedirs(folder_name, exist_ok=True)
-            shutil.copy(save_name, folder_name)
-            shutil.copy("conversation_history.json", folder_name)
+            shutil.move(save_name, folder_name)
+            shutil.move("conversation_history.json", folder_name)
 
             print(f"Done:  {save_name}")
         except Exception as e:

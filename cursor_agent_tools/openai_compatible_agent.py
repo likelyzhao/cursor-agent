@@ -64,10 +64,26 @@ class OpenAICompatibleAgent(BaseAgent):
         # initialize simple chat client key
         # 227的8005 model_id为reject-model
 
-        self.simple_model_host = "http://10.160.199.227:8005/v1"
-        self.simple_model_id = "reject-model"
+        # functioncall/qwen3-moe
+
+        self.simple_model_host_thinking = "http://localhost:8009/v1"
+        self.simple_model_id_thinking = "qwen3-moe"
+
+        self.simple_model_host = "http://localhost:8010/v1"
+        self.simple_model_id = "qwen3-moe-nothink"
+
         try:
             # Create a custom httpx client first to avoid proxies parameter issue
+            import httpx
+            http_client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+            # Initialize with custom client to avoid proxies issue
+            self.client_simple_thinking = AsyncOpenAI(
+                api_key=api_key,
+                http_client=http_client,
+                base_url=self.simple_model_host_thinking
+            )
+            logger.debug("Initialized OpenAI client")
+
             import httpx
             http_client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
             # Initialize with custom client to avoid proxies issue
@@ -77,6 +93,7 @@ class OpenAICompatibleAgent(BaseAgent):
                 base_url=self.simple_model_host
             )
             logger.debug("Initialized OpenAI client")
+
 
         except Exception as e:
             # Handle errors from incompatible package versions
@@ -311,6 +328,15 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
         logger.info(f"Completed {len(tool_results)} tool call results")
         return tool_results
 
+    def remove_think_tags(self, text):
+        import re
+        # 使用正则表达式移除 <think> 和 </think> 之间的内容
+        if '<think>'  in text:
+            return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        elif '</think>'  in text:
+            return re.sub(r'.*?</think>', '', text, flags=re.DOTALL)
+        return text
+
     async def chat_simple(self, message: str, enable_thinking: bool = False) -> str:
         """
         Send a simple message to the OpenAI API and get a response.
@@ -324,24 +350,45 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
         logger.debug(f"Message length: {len(message)} chars")
 
         try:
-            response = await self.client_simple.chat.completions.create(  # type: ignore
-                model=self.simple_model_id,
-                messages=[
-                    {"role": "system", "content": "you are a helpful assistant."},
-                    {"role": "user", "content": message}
-                ],
-                max_tokens=4096,
-                temperature=self.temperature,
-                timeout=self.timeout,
-                extra_body={"chat_template_kwargs": {"enable_thinking": enable_thinking}},
-            )
-            logger.info("Received response from OpenAI API")
+            if enable_thinking:
+                response = await self.client_simple_thinking.chat.completions.create(  # type: ignore
+                    model=self.simple_model_id_thinking,
+                    messages=[
+                        {"role": "system", "content": "you are a helpful assistant."},
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=8192,
+                    temperature=self.temperature,
+                    timeout=self.timeout,
+                    
+                    #extra_body={"enable_thinking": enable_thinking},
+                    #extra_body={"chat_template_kwargs": {"enable_thinking": enable_thinking}},
+                )
+                logger.info("Received response from OpenAI API")
+            else:
+                response = await self.client_simple.chat.completions.create(  # type: ignore
+                    model=self.simple_model_id,
+                    messages=[
+                        {"role": "system", "content": "you are a helpful assistant."},
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=8192,
+                    temperature=self.temperature,
+                    timeout=self.timeout,
+                    
+                    #extra_body={"enable_thinking": enable_thinking},
+                    #extra_body={"chat_template_kwargs": {"enable_thinking": enable_thinking}},
+                )
+                logger.info("Received response from OpenAI API")
 
             # Get the assistant's response
             assistant_message = response.choices[0].message
+        
 
             response_text = assistant_message.content or ""
-            logger.debug(f"Response text length: {len(response_text)} chars")
+            logger.info(f"Response text length: {len(response_text)} chars")
+            if not enable_thinking:
+                response_text = self.remove_think_tags(response_text)
 
             return response_text
 
