@@ -254,40 +254,40 @@ def register_default_tools(agent: Any) -> None:
     logger.debug("Registered tool: file_search")
 
     # Web search
-    agent.register_tool(
-        "web_search",
-        lambda search_term, explanation=None, force=False, objective=None, max_results=5: search_tools.web_search(
-            search_term, explanation, force, objective, max_results, agent
-        ),
-        "Search the web for information.",
-        {
-            "type": "object",
-            "properties": {
-                "search_term": {
-                    "type": "string",
-                    "description": "The search term to look up on the web",
-                },
-                "explanation": {
-                    "type": "string",
-                    "description": "One sentence explanation as to why this search is being performed",
-                },
-                "force": {
-                    "type": "boolean",
-                    "description": "Force internet access even if not required",
-                },
-                "objective": {
-                    "type": "string",
-                    "description": "User objective to determine if up-to-date data is needed",
-                },
-                "max_results": {
-                    "type": "integer",
-                    "description": "Maximum number of results to return (default: 3)",
-                },
-            },
-            "required": ["search_term"],
-        },
-    )
-    logger.debug("Registered tool: web_search")
+    # agent.register_tool(
+    #     "web_search",
+    #     lambda search_term, explanation=None, force=False, objective=None, max_results=5: search_tools.web_search(
+    #         search_term, explanation, force, objective, max_results, agent
+    #     ),
+    #     "Search the web for information.",
+    #     {
+    #         "type": "object",
+    #         "properties": {
+    #             "search_term": {
+    #                 "type": "string",
+    #                 "description": "The search term to look up on the web",
+    #             },
+    #             "explanation": {
+    #                 "type": "string",
+    #                 "description": "One sentence explanation as to why this search is being performed",
+    #             },
+    #             "force": {
+    #                 "type": "boolean",
+    #                 "description": "Force internet access even if not required",
+    #             },
+    #             "objective": {
+    #                 "type": "string",
+    #                 "description": "User objective to determine if up-to-date data is needed",
+    #             },
+    #             "max_results": {
+    #                 "type": "integer",
+    #                 "description": "Maximum number of results to return (default: 3)",
+    #             },
+    #         },
+    #         "required": ["search_term"],
+    #     },
+    # )
+    # logger.debug("Registered tool: web_search")
 
     # Register trend search tool
     agent.register_tool(

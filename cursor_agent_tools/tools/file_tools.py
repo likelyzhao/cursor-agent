@@ -282,7 +282,9 @@ def create_file(
     """
     try:
         logger.info(f"Creating file: {file_path}")
-
+        
+        # import pdb; pdb.set_trace()
+        
         # Request permission if agent is provided
         if agent:
             operation_details = {

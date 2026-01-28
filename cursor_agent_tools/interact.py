@@ -99,8 +99,7 @@ You have tools to search the codebase and read files. Follow these rules regardi
 </searching_and_reading>
 
 You MUST use the following format when citing code regions or blocks:
-```12:15:app/components/Todo.tsx
-// ... existing code ...
+``12:15:app/components/Todo.tsx
 ```
 This is the ONLY acceptable format for code citations. The format is ```startLine:endLine:filepath where startLine and endLine are line numbers.
 
@@ -298,6 +297,8 @@ async def run_single_query(agent: Any, query: str, user_info: Optional[Dict[str,
 
     try:
         # If we're using the custom system prompt, inject it into the agent
+        #import pdb 
+        #pdb.set_trace()
         if use_custom_system_prompt:
             logger.debug("Temporarily setting custom system prompt")
             original_system_prompt = agent.system_prompt
@@ -312,6 +313,8 @@ async def run_single_query(agent: Any, query: str, user_info: Optional[Dict[str,
         agent_response = await agent.chat(query, user_info)
         return agent_response
     except Exception as e:
+        #import pdb 
+        #pdb.set_trace()
         # Log error but still return something valid for the return type
         logger.error(f"Error in run_single_query: {str(e)}")
         if isinstance(e, ValueError) and str(e).startswith("Too many tokens"):
@@ -412,6 +415,12 @@ async def run_agent_interactive(
                 """
 
     while iteration <= max_iterations:
+        # 检查是否已经生成了 DEMO001.osc 文件，如果生成则提前终止
+        demo_osc_path = os.path.join(workspace_path, "DEMO001.osc")
+        if os.path.exists(demo_osc_path):
+            await print_agent_information(agent, "status", "检测到 DEMO001.osc 文件已生成，提前终止任务")
+            break
+            
         await print_agent_information(agent, "status", f"Running iteration {iteration}/{max_iterations}")
         await print_agent_information(
             agent, "status", "Processing query", query[:100] + "..." if len(query) > 100 else query
@@ -677,6 +686,7 @@ def is_task_complete(response: str) -> bool:
         "the project is now ready",
         "everything is now implemented",
         "all features are now implemented",
+        "completed it successfully"
     ]
 
     response_lower = response.lower()
@@ -925,7 +935,7 @@ async def process_tool_calls(
         Tuple of (updated total tool calls, extracted tool calls list)
     """
     logger.info("Processing tool calls from agent response")
-
+    # import pdb; pdb.set_trace()
     # Extract tool calls from the response - check if it's a structured response or string
     if isinstance(agent_response, dict) and "tool_calls" in agent_response:
         # It's a structured response with tool_calls directly available
