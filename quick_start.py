@@ -10,6 +10,8 @@ from cursor_agent_tools import run_agent_interactive
 
 #场景开始时，主车以指定速度在车道上行驶，前方有前车保持2秒时距。3秒后激活ALKS控制器。当前车接近阻挡物（距离小于50m）时，前车会执行cut-out操作，以正弦曲线方式变道至相邻车道（横向速度不超过2m/s）。主车需要识别这一突发情况并做出适当反应。场景在预计主车到达阻挡物位置后10秒结束。
 #cut_out_fully_blocking.osc
+#场景开始时，主车以指定速度在车道上行驶，前方有前车保持2秒时距。3秒后激活ALKS控制器。当前车接近阻挡物（距离小于50m）时，前车会执行cut-out操作，以正弦曲线方式变道至相邻车道（横向速度不超过2m/s）。主车需要识别这一突发情况并做出适当反应。场景在预计主车到达阻挡物位置后10秒结束。
+#cut_out_fully_blocking.osc
 
 async def main():
 
@@ -57,7 +59,6 @@ async def main():
 
     await run_agent_interactive(
         # model='claude-3-5-sonnet-latest',
-
         initial_query=query_carla, max_iterations=15,
         agent=agent
         #user_info=user_info,

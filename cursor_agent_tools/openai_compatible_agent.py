@@ -60,6 +60,105 @@ class OpenAICompatibleAgent(BaseAgent):
         self.original_host = os.environ.get("REMOTE_HOST")
         self.host = host or self.original_host or "http://localhost:11434"
 
+
+        # initialize simple chat client key
+        # 227的8005 model_id为reject-model
+
+        # functioncall/qwen3-moe
+        self.simple_model_host_thinking = os.environ.get("REMOTE_HOST_SIMPLE")
+        self.simple_model_host_thinking = "http://localhost:8009/v1"
+        self.simple_model_id_thinking = "qwen3-moe"
+
+        self.simple_model_host = os.environ.get("REMOTE_HOST_SIMPLE")
+        self.simple_model_host = "http://localhost:8010/v1"
+        self.simple_model_id = "qwen3-moe-nothink"
+
+        self.vision_model_host = "http://localhost:8018/v1"
+        self.vision_model_id = "qwen3-vl-instruct"
+        #def get_trajactory_attention(video_url, system_prompt, user_prompt):
+
+
+
+    # # 发起流式请求
+    # stream_response = client.chat.completions.create(
+    #     model=model_id,
+    #     messages=[
+    #         {"role": "system", "content": system_prompt},
+    #         {
+    #             "role": "user",
+    #             "content": [
+    #                 {"type": "video_url", "video_url": {"url": video_to_data_uri(video_url)}},
+    #                 {"type": "text", "text": user_prompt},
+    #             ],
+    #         },
+    #     ],
+    #     frequency_penalty = 1.5,
+    #     max_tokens = 1024,
+    #     temperature=0.2,
+    #     top_p=0.1,
+    #     stream=True  # 启用流式模式
+    # )
+
+    # # 处理流式响应
+    # full_response = []
+    # for chunk in stream_response:
+    #     if chunk.choices[0].delta.content:  # 只处理包含内容的片段
+    #         text_segment = chunk.choices[0].delta.content
+    #         #print(text_segment, end="", flush=True)  # 逐片段打印
+
+    #         full_response.append(text_segment)
+    # # print("\n")
+
+    # # # 获取完整结果
+    # final_text = "".join(full_response)
+    # #print(final_text)
+    # return final_text
+    # # print("\n最终完整回答：")
+
+
+        try:
+            # Create a custom httpx client first to avoid proxies parameter issue
+            import httpx
+            http_client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+            # Initialize with custom client to avoid proxies issue
+            self.client_simple_thinking = AsyncOpenAI(
+                api_key=api_key,
+                http_client=http_client,
+                base_url=self.simple_model_host_thinking
+            )
+            logger.debug("Initialized OpenAI client")
+
+            import httpx
+            http_client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+            # Initialize with custom client to avoid proxies issue
+            self.client_simple = AsyncOpenAI(
+                api_key=api_key,
+                http_client=http_client,
+                base_url=self.simple_model_host
+            )
+            logger.debug("Initialized OpenAI client")
+
+
+            import httpx
+            http_client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+            # Initialize with custom client to avoid proxies issue
+            self.client_simple_vision = AsyncOpenAI(
+                api_key=api_key,
+                http_client=http_client,
+                base_url=self.vision_model_host
+            )
+            logger.debug("Initialized OpenAI client")
+
+        except Exception as e:
+            # Handle errors from incompatible package versions
+            logger.error(f"Error initializing OpenAI client: {e}")
+            # Mock client for tests to pass without actual API calls
+            if not api_key or api_key == "dummy-key" or "test" in str(model).lower():
+                logger.warning("Creating mock OpenAI client for tests")
+                self.client = type('MockOpenAIClient', (), {'chat': type('MockChatCompletions', (), {'create': lambda *args, **kwargs: None})()})
+            else:
+                raise RuntimeError(f"Failed to initialize OpenAI client. Please check package compatibility: {e}")
+
         # Initialize OpenAI client
         try:
             # Create a custom httpx client first to avoid proxies parameter issue
@@ -87,6 +186,36 @@ class OpenAICompatibleAgent(BaseAgent):
         self.system_prompt = self._generate_system_prompt()
         logger.debug(f"Generated system prompt ({len(self.system_prompt)} chars)")
         logger.debug(f"Tool timeouts set to {default_tool_timeout}s")
+
+    def _video_to_data_uri(self, path):
+        import pdb
+        import base64
+        #pdb.set_trace()
+        with open(path, "rb") as f:
+            data = f.read()
+        b64 = base64.b64encode(data).decode("utf-8")
+        return f"data:video/mp4;base64,{b64}"
+
+
+    def _save_conversation_history(self):
+        """保存对话历史到JSON文件"""
+        with open("conversation_history.json", "w") as file:
+            dump_list = []
+            for item in self.conversation_history:
+                # if 'tool_calls' in item:
+                #     item_copy = item.copy()
+                #     del item_copy['tool_calls']
+                #     dump_list.append(item_copy)
+                # else:
+                #     dump_list.append(item)
+                dump_list.append(item)
+            json.dump(dump_list, file, indent=4, ensure_ascii=False)
+
+    def _append_to_conversation_history(self, item):
+        """向对话历史添加新项并立即保存到文件"""
+        self.conversation_history.append(item)
+        self._save_conversation_history()
+        
 
     def _is_valid_api_key(self, api_key: str) -> bool:
         """
@@ -290,11 +419,19 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
         logger.info(f"Response contains {len(assistant_message.tool_calls)} tool calls")
 
         # Add the assistant's response to the conversation history
-        self.conversation_history.append(
+        self._append_to_conversation_history(
             {
                 "role": "assistant",
                 "content": assistant_message.content or "",
-                "tool_calls": assistant_message.tool_calls,
+                # "tool_calls": assistant_message.tool_calls,
+                "tool_calls": {
+                    "id": assistant_message.tool_calls[0].id,
+                    "function": {
+                        "name": assistant_message.tool_calls[0].function.name,
+                        "arguments": assistant_message.tool_calls[0].function.arguments,
+                    },
+                    "type": assistant_message.tool_calls[0].type,
+                }
             }
         )
 
@@ -325,7 +462,9 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
 
         # Add the tool results to the conversation history
         for result in tool_results:
-            self.conversation_history.append(result)
+            result["tool_name"] = assistant_message.tool_calls[0].function.name
+            result["tool_parameters"] = assistant_message.tool_calls[0].function.arguments
+            self._append_to_conversation_history(result)
 
         # Make a follow-up API call with the tool results
         logger.debug("Making follow-up API call with tool results")
@@ -369,7 +508,7 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
         else:
             # Add the assistant's follow-up response to the conversation history
             follow_up_message = follow_up_response.choices[0].message
-            self.conversation_history.append(
+            self._append_to_conversation_history(
                 {"role": "assistant", "content": follow_up_message.content}
             )
 
@@ -382,6 +521,123 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
                 "tool_calls": processed_tool_calls,
                 "thinking": thinking
             }
+
+    def remove_think_tags(self, text):
+        import re
+        # 使用正则表达式移除 <think> 和 </think> 之间的内容
+        if '<think>'  in text:
+            return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        elif '</think>'  in text:
+            return re.sub(r'.*?</think>', '', text, flags=re.DOTALL)
+        return text
+
+    async def chat_simple(self, message: str, enable_thinking: bool = False) -> str:
+        """
+        Send a simple message to the OpenAI API and get a response.
+
+        Args:
+            message: The user's message
+        Returns:
+            The assistant's response as a string
+        """
+        logger.info("Sending simple message to OpenAI API")
+        logger.debug(f"Message length: {len(message)} chars")
+
+        try:
+            if enable_thinking:
+                response = await self.client_simple_thinking.chat.completions.create(  # type: ignore
+                    model=self.simple_model_id_thinking,
+                    messages=[
+                        {"role": "system", "content": "you are a helpful assistant."},
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=8192,
+                    temperature=self.temperature,
+                    timeout=self.timeout,
+                    
+                    #extra_body={"enable_thinking": enable_thinking},
+                    #extra_body={"chat_template_kwargs": {"enable_thinking": enable_thinking}},
+                )
+                logger.info("Received response from OpenAI API")
+            else:
+                response = await self.client_simple.chat.completions.create(  # type: ignore
+                    model=self.simple_model_id,
+                    messages=[
+                        {"role": "system", "content": "you are a helpful assistant."},
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=8192,
+                    temperature=self.temperature,
+                    timeout=self.timeout,
+                    
+                    #extra_body={"enable_thinking": enable_thinking},
+                    #extra_body={"chat_template_kwargs": {"enable_thinking": enable_thinking}},
+                )
+                logger.info("Received response from OpenAI API")
+
+            # Get the assistant's response
+            assistant_message = response.choices[0].message
+        
+
+            response_text = assistant_message.content or ""
+            logger.info(f"Response text length: {len(response_text)} chars")
+            if not enable_thinking:
+                response_text = self.remove_think_tags(response_text)
+
+            return response_text
+
+        except Exception as e:
+            error_msg = f"Error: An unexpected error occurred. Details: {str(e)}"
+            logger.error(f"Unexpected error: {type(e).__name__}: {str(e)}")
+            return error_msg
+
+    async def chat_simple_video(self, message: str, video_path: str, enable_thinking: bool = False) -> str:
+        """
+        Send a simple message to the OpenAI API and get a response.
+
+        Args:
+            message: The user's message
+        Returns:
+            The assistant's response as a string
+        """
+        logger.info("Sending simple message to OpenAI API")
+        logger.debug(f"Message length: {len(message)} chars")
+
+        try:
+            response = await self.client_simple_vision.chat.completions.create(  # type: ignore
+                model=self.vision_model_id,
+                messages=[
+                    {"role": "system", "content": "you are a helpful assistant."},
+                    {
+                        "role": "user", 
+                        "content": [
+                            {"type": "video_url", "video_url": {"url": self._video_to_data_uri(video_path)}},
+                            {"type": "text", "text": message},
+                        ],
+                    },
+                ],
+                max_tokens=8192,
+                temperature=self.temperature,
+                timeout=self.timeout,
+                
+                #extra_body={"enable_thinking": enable_thinking},
+                #extra_body={"chat_template_kwargs": {"enable_thinking": enable_thinking}},
+            )
+            logger.info("Received response from OpenAI API")
+            
+
+            # Get the assistant's response
+            assistant_message = response.choices[0].message
+        
+            response_text = assistant_message.content or ""
+            logger.info(f"Response text length: {len(response_text)} chars")
+
+            return response_text
+
+        except Exception as e:
+            error_msg = f"Error: An unexpected error occurred. Details: {str(e)}"
+            logger.error(f"Unexpected error: {type(e).__name__}: {str(e)}")
+            return error_msg
 
     async def chat(self, message: str, user_info: Optional[Dict[str, Any]] = None, is_manual: bool = True) -> Union[str, AgentResponse]:
         """
@@ -398,6 +654,8 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
         # Format the user message with user_info if provided
         # remove the value of toolcall key of the user_info dict before formatting
 
+        if user_info is None:
+            user_info = {}
         user_info_t = user_info.copy()
         if user_info_t and "tool_calls" in user_info_t:
             user_info_t["tool_calls"] = "[]"
@@ -412,19 +670,20 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
 
         if is_manual:
             # Add the user message to the conversation history
-            self.conversation_history.append({"role": "user", "content": formatted_message})
+            self._append_to_conversation_history({"role": "system", "content": self.system_prompt})
+            self._append_to_conversation_history({"role": "user", "content": formatted_message})
             # add dunmp conversation_history 
-            with open("conversation_history.json", "w") as file:
-                dump_list = []
-                for item in self.conversation_history:
-                    if 'tool_calls' in item:
-                        item_copy = item.copy()
-                        del item_copy['tool_calls']
-                        dump_list.append(item_copy)
-                    else:
-                        dump_list.append(item)
-                    #json.dumps(item, indent=4, ensure_ascii=False)
-                json.dump(dump_list, file, indent=4, ensure_ascii=False)
+            # with open("conversation_history.json", "w") as file:
+            #     dump_list = []
+            #     for item in self.conversation_history:
+            #         if 'tool_calls' in item:
+            #             item_copy = item.copy()
+            #             del item_copy['tool_calls']
+            #             dump_list.append(item_copy)
+            #         else:
+            #             dump_list.append(item)
+            #         #json.dumps(item, indent=4, ensure_ascii=False)
+            #     json.dump(dump_list, file, indent=4, ensure_ascii=False)
 
             # Prepare the messages for the API call
             messages = [{"role": "system", "content": self.system_prompt}] + self.conversation_history
@@ -562,7 +821,7 @@ This is the ONLY acceptable format for code citations. The format is ```startLin
                     # }
                 else:
                     # Add the assistant's response to the conversation history
-                    self.conversation_history.append(
+                    self._append_to_conversation_history(
                         {"role": "assistant", "content": assistant_message.content}
                     )
 

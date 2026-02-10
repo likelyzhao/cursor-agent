@@ -104,6 +104,7 @@ You MUST use the following format when citing code regions or blocks:
 This is the ONLY acceptable format for code citations. The format is ```startLine:endLine:filepath where startLine and endLine are line numbers.
 
 When breaking down complex tasks, consider each step carefully and use the appropriate tools for each part of the problem. Work iteratively toward a complete solution.
+When Task is Complete, respond with: task is complete or completed it successfully
 """
 
 
@@ -178,7 +179,8 @@ Return ONLY the formatted text with ANSI codes that I can directly print to the 
 Do not include explanation text or markdown code blocks."""
 
         # Use the agent to generate the formatted outpu
-        agent_response = await agent.chat(format_prompt, temp_user_info, is_manual=False)
+        # agent_response = await agent.chat(format_prompt, temp_user_info, is_manual=False)
+        agent_response = await agent.chat_simple(format_prompt)
 
         # Handle structured response
         if isinstance(agent_response, dict):
@@ -236,7 +238,9 @@ If user input is NOT needed:
 
         # Get the analysis from the agen
         logger.debug("Sending analysis prompt to agent")
-        agent_response = await agent.chat(analysis_prompt, temp_user_info, is_manual=False)
+
+        agent_response = await agent.chat_simple(analysis_prompt)
+        # agent_response = await agent.chat(analysis_prompt, temp_user_info, is_manual=False)
 
         # Handle structured response
         if isinstance(agent_response, dict):
@@ -416,10 +420,10 @@ async def run_agent_interactive(
 
     while iteration <= max_iterations:
         # 检查是否已经生成了 DEMO001.osc 文件，如果生成则提前终止
-        demo_osc_path = os.path.join(workspace_path, "DEMO001.osc")
-        if os.path.exists(demo_osc_path):
-            await print_agent_information(agent, "status", "检测到 DEMO001.osc 文件已生成，提前终止任务")
-            break
+        # demo_osc_path = os.path.join(workspace_path, "DEMO001.osc")
+        # if os.path.exists(demo_osc_path):
+        #     await print_agent_information(agent, "status", "检测到 DEMO001.osc 文件已生成，提前终止任务")
+        #     break
             
         await print_agent_information(agent, "status", f"Running iteration {iteration}/{max_iterations}")
         await print_agent_information(
@@ -750,14 +754,16 @@ async def get_continuation_prompt(agent: Any, iteration: int, last_response: str
                             What's the best continuation prompt for the next iteration? Consider:
                             1. Summarize progress so far
                             2. Identify next steps based on current status
-                            3. Incorporate any user inpu
+                            3. Incorporate any user input
                             4. Frame the prompt to move the task forward
 
                             Return ONLY the continuation prompt itself with no additional explanations or meta-text.
                             """
 
         # Get the continuation prompt from the agen
-        agent_response = await agent.chat(analysis_prompt, temp_user_info, is_manual=False)
+
+        agent_response = await agent.chat_simple(analysis_prompt)
+        # agent_response = await agent.chat(analysis_prompt, temp_user_info, is_manual=False)
 
         # Handle structured response
         if isinstance(agent_response, dict):

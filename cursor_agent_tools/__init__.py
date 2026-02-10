@@ -15,6 +15,7 @@ from .interact import run_agent_interactive, run_agent_chat
 from .claude_agent import ClaudeAgent
 from .openai_agent import OpenAIAgent
 from .ollama_agent import OllamaAgent
+from .openai_compatible_agent import OpenAICompatibleAgent
 
 # Dynamic agent class discovery (keeping for backward compatibility)
 _agent_classes = {}
@@ -48,4 +49,4 @@ for _file in os.listdir(_current_dir):
 
 # Create __all__ list dynamically
 __all__ = ["BaseAgent", "create_agent", "PermissionOptions", "run_agent_interactive", "run_agent_chat",
-           "ClaudeAgent", "OpenAIAgent", "OllamaAgent"] + list(_agent_classes.keys())
+           "ClaudeAgent", "OpenAIAgent", "OllamaAgent", "OpenAICompatibleAgent"] + list(_agent_classes.keys())
